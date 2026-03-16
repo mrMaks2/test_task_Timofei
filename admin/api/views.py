@@ -4,7 +4,7 @@ import json
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, status, permissions
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .serializers import *
@@ -13,6 +13,10 @@ from apps.customers.models import Customer
 from apps.orders.models import Order, OrderItem
 from apps.cart.models import Cart, CartItem
 import requests
+from urllib.parse import parse_qs
+import logging
+
+logger = logging.getLogger(__name__)
 
 def validate_telegram_init_data(init_data: str) -> bool:
     """
@@ -50,6 +54,54 @@ def validate_telegram_init_data(init_data: str) -> bool:
         return hmac.compare_digest(expected_hash, received_hash)
     except Exception:
         return False
+
+def get_user_from_init_data(init_data: str):
+    """
+    Извлекает пользователя из initData
+    
+    Args:
+        init_data: строка с данными инициализации
+    
+    Returns:
+        dict: данные пользователя или None
+    """
+    try:
+        parsed_data = parse_qs(init_data)
+        user_data = parsed_data.get('user', [''])[0]
+        
+        if user_data:
+            # Декодируем URL-encoded JSON
+            import urllib.parse
+            user_data = urllib.parse.unquote(user_data)
+            return json.loads(user_data)
+        return None
+    except Exception as e:
+        logger.error(f"Error extracting user from init_data: {e}")
+        return None
+
+@api_view(['POST'])
+def validate_init_data(request):
+    """
+    Эндпоинт для валидации init_data от Telegram WebApp
+    """
+    init_data = request.data.get('init_data')
+    if not init_data:
+        return Response(
+            {'valid': False, 'error': 'init_data is required'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    bot_token = settings.BOT_TOKEN
+    is_valid = validate_telegram_init_data(init_data, bot_token)
+    
+    if is_valid:
+        user_data = get_user_from_init_data(init_data)
+        return Response({
+            'valid': True,
+            'user': user_data
+        })
+    else:
+        return Response({'valid': False})
 
 class ValidateInitDataView(APIView):
     permission_classes = [permissions.AllowAny]

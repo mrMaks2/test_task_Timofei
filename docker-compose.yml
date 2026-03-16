@@ -2,22 +2,30 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:15
+    container_name: postgres
+    image: postgres:15-alpine
+    env_file:
+      - .env
     environment:
-      POSTGRES_DB: shopdb
-      POSTGRES_USER: shopuser
-      POSTGRES_PASSWORD: shoppass
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U shopuser"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 10s
+    networks:
+      - app-network
+    restart: unless-stopped
 
   admin:
+    container_name: admin
     build: ./admin
     command: >
       sh -c "python manage.py migrate &&
@@ -32,9 +40,19 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://shopuser:shoppass@db:5432/shopdb
+      DATABASE_URL: ${DB_ENGINE}://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
 
   bot:
+    container_name: bot
     build: ./bot
     command: python src/main.py
     volumes:
@@ -44,10 +62,13 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - app-network
     environment:
-      DATABASE_URL: postgresql+asyncpg://shopuser:shoppass@db:5432/shopdb
+      DATABASE_URL: ${DB_ENGINE_ASYNC}://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
 
   webapp:
+    container_name: webapp
     build: ./webapp
     command: npm run dev
     volumes:
@@ -56,9 +77,20 @@ services:
     ports:
       - "5173:5173"
     environment:
-      VITE_API_URL: http://admin:8000/api
+      VITE_API_URL: http://admin:8000/${API_VERS}
     depends_on:
-      - admin
+      admin:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
 
 volumes:
   postgres_data:
+  static:
+
+networks:
+  app-network:
+    driver: bridge

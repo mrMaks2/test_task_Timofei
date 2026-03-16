@@ -17,6 +17,6 @@ async def close_db():
     if engine:
         await engine.dispose()
 
-async def get_session() -> AsyncSession:
+async def get_session() -> AsyncSession: # type: ignore
     async with async_session_maker() as session:
         yield session
