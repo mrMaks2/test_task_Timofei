@@ -71,6 +71,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -154,4 +155,4 @@ REST_FRAMEWORK = {
 }
 
 BOT_INTERNAL_TOKEN = os.getenv('BOT_INTERNAL_TOKEN')
-BOT_WEBHOOK_URL = 'http://bot:8081/notify'
+BOT_WEBHOOK_URL = os.getenv('BOT_WEBHOOK_URL', 'http://bot:8081/notify')
