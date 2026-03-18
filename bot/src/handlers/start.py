@@ -1,12 +1,11 @@
 from aiogram import Router
 from aiogram.filters import CommandStart
-from aiogram.types import Message, ReplyKeyboardRemove
+from aiogram.types import Message, ReplyKeyboardRemove, InputMediaPhoto
 from sqlalchemy import select
 from ..database import async_session_maker
 from ..models import User, Product, ProductImage
 from ..keyboards import phone_keyboard, main_menu_keyboard, product_keyboard
 from ..config import settings
-from aiogram.types import InputMediaPhoto
 
 router = Router()
 

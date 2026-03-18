@@ -5,7 +5,7 @@ from ..config import settings
 
 class IsAdminFilter(BaseFilter):
     """
-    Custom filter for admin users based on ADMIN_IDS env.
+    Кастомный фильтр для админов на основе переменной ADMIN_IDS.
     """
 
     async def __call__(self, message: Message) -> bool:
@@ -16,7 +16,7 @@ class IsAdminFilter(BaseFilter):
 
 class IsSubscribedFilter(BaseFilter):
     """
-    Placeholder for additional subscription checks.
+    Заглушка для дополнительных проверок подписки.
     """
 
     async def __call__(self, message: Message) -> bool:

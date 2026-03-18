@@ -26,7 +26,7 @@ def validate_init_data(request):
     init_data = request.data.get("init_data")
     if not init_data:
         return Response(
-            {"valid": False, "error": "init_data is required"},
+            {"valid": False, "error": "init_data обязателен"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
@@ -98,17 +98,17 @@ class CartViewSet(viewsets.GenericViewSet):
     def add_item(self, request):
         cart = self.get_cart(request)
         if not cart:
-            return Response({"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Пользователь не найден"}, status=status.HTTP_400_BAD_REQUEST)
 
         product_id = request.data.get("product_id")
         quantity = int(request.data.get("quantity", 1))
         if quantity <= 0:
-            return Response({"error": "Quantity must be positive"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Количество должно быть больше нуля"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             product = Product.objects.get(id=product_id, is_active=True)
         except Product.DoesNotExist:
-            return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Товар не найден"}, status=status.HTTP_404_NOT_FOUND)
 
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart, product=product, defaults={"quantity": quantity}
@@ -129,7 +129,7 @@ class CartViewSet(viewsets.GenericViewSet):
         try:
             cart_item = CartItem.objects.get(id=item_id)
         except CartItem.DoesNotExist:
-            return Response({"error": "Item not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Элемент не найден"}, status=status.HTTP_404_NOT_FOUND)
 
         if quantity <= 0:
             cart_item.delete()
@@ -150,7 +150,7 @@ class CartViewSet(viewsets.GenericViewSet):
             serializer = CartSerializer(cart)
             return Response(serializer.data)
         except CartItem.DoesNotExist:
-            return Response({"error": "Item not found"}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Элемент не найден"}, status=status.HTTP_404_NOT_FOUND)
 
     @action(detail=False, methods=["post"])
     def clear(self, request):
@@ -185,16 +185,16 @@ class OrderViewSet(viewsets.GenericViewSet):
     def create(self, request):
         customer = self.get_customer(request)
         if not customer:
-            return Response({"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Пользователь не найден"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             cart = Cart.objects.get(user=customer)
         except Cart.DoesNotExist:
-            return Response({"error": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Корзина пуста"}, status=status.HTTP_400_BAD_REQUEST)
 
         cart_items = cart.items.all()
         if not cart_items:
-            return Response({"error": "Cart is empty"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Корзина пуста"}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = OrderCreateSerializer(data=request.data)
         if not serializer.is_valid():
@@ -268,13 +268,13 @@ class OrderViewSet(viewsets.GenericViewSet):
         order = self.get_object()
         customer = self.get_customer(request)
         if not customer or order.user != customer:
-            return Response({"error": "Permission denied"}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"error": "Доступ запрещен"}, status=status.HTTP_403_FORBIDDEN)
 
         if order.status in ["new", "paid"]:
             order.status = "cancelled"
             order.save()
-            return Response({"status": "order cancelled"})
+            return Response({"status": "Заказ отменен"})
         return Response(
-            {"error": "Cannot cancel order in current status"},
+            {"error": "Нельзя отменить заказ в текущем статусе"},
             status=status.HTTP_400_BAD_REQUEST,
         )

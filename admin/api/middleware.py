@@ -5,7 +5,7 @@ from apps.customers.models import Customer
 
 class TelegramAuthMiddleware(MiddlewareMixin):
     """
-    Middleware for Telegram WebApp initData validation.
+    Middleware для проверки initData от Telegram WebApp.
     """
 
     def process_request(self, request):

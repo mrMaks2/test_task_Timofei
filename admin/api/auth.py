@@ -7,7 +7,7 @@ from django.conf import settings
 
 def validate_telegram_init_data(init_data: str) -> bool:
     """
-    Validate initData from Telegram WebApp.
+    Валидация initData от Telegram WebApp.
     """
     try:
         parsed_data = parse_qs(init_data, strict_parsing=True)
@@ -41,7 +41,7 @@ def validate_telegram_init_data(init_data: str) -> bool:
 
 def get_user_from_init_data(init_data: str):
     """
-    Extract user info from initData.
+    Извлечение данных пользователя из initData.
     """
     try:
         parsed_data = parse_qs(init_data)
