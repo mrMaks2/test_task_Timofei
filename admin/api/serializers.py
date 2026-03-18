@@ -60,13 +60,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
-    user_name = serializers.CharField(source='user.full_name', read_only=True)
+    user_name = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
         fields = ['id', 'user', 'user_name', 'status', 'full_name', 'address', 
                  'phone', 'total', 'items', 'created_at', 'updated_at']
         read_only_fields = ['user', 'total', 'created_at', 'updated_at']
+
+    def get_user_name(self, obj):
+        parts = [obj.user.first_name or "", obj.user.last_name or ""]
+        full = " ".join(p for p in parts if p).strip()
+        return full or obj.user.username or str(obj.user.telegram_id)
 
 class OrderCreateSerializer(serializers.ModelSerializer):
     class Meta:

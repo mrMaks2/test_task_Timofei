@@ -85,6 +85,7 @@ interface Window {
         }>;
       }, callback?: (buttonId: string) => void) => void;
       showAlert: (message: string, callback?: () => void) => void;
+      showToast?: (message: string) => void;
       enableClosingConfirmation: () => void;
       disableClosingConfirmation: () => void;
       onEvent: (eventType: string, callback: () => void) => void;
@@ -101,6 +102,7 @@ interface Window {
 interface ImportMetaEnv {
   readonly VITE_API_URL: string;
   readonly VITE_BOT_TOKEN: string;
+  readonly VITE_TEST_TELEGRAM_ID?: string;
 }
 
 interface ImportMeta {

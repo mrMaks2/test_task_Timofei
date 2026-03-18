@@ -1,5 +1,7 @@
 import asyncio
 import logging
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -9,6 +11,7 @@ from .config import settings
 from .database import init_db, close_db
 from .middlewares.registration import RegistrationMiddleware
 from .middlewares.subscription import SubscriptionMiddleware
+from .middlewares.logging_mw import LoggingMiddleware
 from .handlers import (
     start, catalog, cart, order, inline,
     admin_chat, commands, notifications
@@ -33,6 +36,7 @@ async def handle_notification(request: web.Request):
 async def start_webhook_server():
     app = web.Application()
     app.router.add_post('/notify', handle_notification)
+    app.router.add_get('/health', lambda request: web.Response(text="ok"))
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', 8081)
@@ -41,7 +45,19 @@ async def start_webhook_server():
     return runner
 
 async def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    log_dir = Path("logs")
+    log_dir.mkdir(exist_ok=True)
+    handlers = [
+        logging.StreamHandler(),
+        RotatingFileHandler(
+            log_dir / "bot.log", maxBytes=5 * 1024 * 1024, backupCount=5
+        ),
+    ]
+    logging.basicConfig(
+        level=settings.LOG_LEVEL,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=handlers,
+    )
     bot = Bot(token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
 
@@ -49,6 +65,8 @@ async def main():
     dp.shutdown.register(on_shutdown)
 
     # Middleware
+    dp.message.middleware(LoggingMiddleware())
+    dp.callback_query.middleware(LoggingMiddleware())
     dp.message.middleware(RegistrationMiddleware())
     dp.callback_query.middleware(RegistrationMiddleware())
     dp.message.middleware(SubscriptionMiddleware())

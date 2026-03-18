@@ -6,17 +6,20 @@ from ..models import FAQ
 
 router = Router()
 
+
 @router.inline_query()
 async def inline_faq(inline_query: types.InlineQuery):
     query = inline_query.query.strip()
     async with async_session_maker() as session:
         if query:
             results = await session.execute(
-                select(FAQ).where(FAQ.question.ilike(f"%{query}%"), FAQ.is_active).order_by(FAQ.order)
+                select(FAQ)
+                .where(FAQ.question.ilike(f"%{query}%"), FAQ.is_active == True)
+                .order_by(FAQ.order)
             )
         else:
             results = await session.execute(
-                select(FAQ).where(FAQ.is_active).order_by(FAQ.order).limit(10)
+                select(FAQ).where(FAQ.is_active == True).order_by(FAQ.order).limit(10)
             )
         faqs = results.scalars().all()
 
@@ -30,7 +33,6 @@ async def inline_faq(inline_query: types.InlineQuery):
                 input_message_content=InputTextMessageContent(
                     message_text=f"<b>{faq.question}</b>\n\n{faq.answer}"
                 ),
-                thumb_url="https://example.com/faq_icon.png"  # можно заменить
             )
         )
     await inline_query.answer(articles, cache_time=10)

@@ -1,52 +1,66 @@
 from aiogram import Router, types, F
-from aiogram.types import InlineKeyboardMarkup
 from sqlalchemy import select, delete
+from sqlalchemy.orm import selectinload
 from ..database import async_session_maker
-from ..models import Cart, CartItem, User, Product
+from ..models import Cart, CartItem, User
 from ..keyboards import cart_keyboard
+from ..callbacks import CartActionCb
 
 router = Router()
 
-async def get_or_create_cart(user: User):
+
+async def get_or_create_cart(user: User) -> Cart:
     async with async_session_maker() as session:
-        cart = await session.execute(select(Cart).where(Cart.user_id == user.id))
-        cart = cart.scalar_one_or_none()
+        result = await session.execute(select(Cart).where(Cart.user_id == user.id))
+        cart = result.scalar_one_or_none()
         if not cart:
             cart = Cart(user_id=user.id)
             session.add(cart)
             await session.commit()
         return cart
 
-@router.callback_query(F.data == 'cart')
+
+async def fetch_cart_items(cart_id: int):
+    async with async_session_maker() as session:
+        result = await session.execute(
+            select(CartItem)
+            .where(CartItem.cart_id == cart_id)
+            .options(selectinload(CartItem.product))
+        )
+        items = result.scalars().all()
+    total = sum(item.product.price * item.quantity for item in items)
+    return items, total
+
+
+@router.callback_query(F.data == "cart")
 async def show_cart(callback: types.CallbackQuery, db_user: User):
     cart = await get_or_create_cart(db_user)
-    async with async_session_maker() as session:
-        items = await session.execute(
-            select(CartItem).where(CartItem.cart_id == cart.id)
-        )
-        items = items.scalars().all()
-        total = sum(item.product.price * item.quantity for item in items)
+    items, total = await fetch_cart_items(cart.id)
     if not items:
         await callback.message.edit_text("Корзина пуста.")
         return
     await callback.message.edit_text(
-        f"Ваша корзина:\n\n" + "\n".join(
+        "Ваша корзина:\n\n"
+        + "\n".join(
             f"{item.product.name} — {item.quantity} шт. = {item.product.price * item.quantity} руб."
             for item in items
-        ) + f"\n\nИтого: {total} руб.",
-        reply_markup=cart_keyboard(items, total)
+        )
+        + f"\n\nИтого: {total} руб.",
+        reply_markup=cart_keyboard(items),
     )
 
-@router.callback_query(F.data.startswith('add_to_cart:'))
+
+@router.callback_query(F.data.startswith("add_to_cart:"))
 async def add_to_cart(callback: types.CallbackQuery, db_user: User):
-    product_id = int(callback.data.split(':')[1])
+    product_id = int(callback.data.split(":")[1])
     cart = await get_or_create_cart(db_user)
     async with async_session_maker() as session:
-        # Проверяем, есть ли уже такой товар
-        item = await session.execute(
-            select(CartItem).where(CartItem.cart_id == cart.id, CartItem.product_id == product_id)
+        item_result = await session.execute(
+            select(CartItem).where(
+                CartItem.cart_id == cart.id, CartItem.product_id == product_id
+            )
         )
-        item = item.scalar_one_or_none()
+        item = item_result.scalar_one_or_none()
         if item:
             item.quantity += 1
         else:
@@ -55,3 +69,40 @@ async def add_to_cart(callback: types.CallbackQuery, db_user: User):
         await session.commit()
     await callback.answer("Товар добавлен в корзину", show_alert=False)
     await show_cart(callback, db_user)
+
+
+@router.callback_query(F.data.startswith("cart_action:"))
+async def cart_action(callback: types.CallbackQuery, db_user: User):
+    data = CartActionCb.unpack(callback.data)
+    action = data.action
+    item_id = data.item_id
+
+    cart = await get_or_create_cart(db_user)
+    async with async_session_maker() as session:
+        if action == "clear":
+            await session.execute(delete(CartItem).where(CartItem.cart_id == cart.id))
+            await session.commit()
+            await callback.message.edit_text("Корзина очищена.")
+            return
+
+        if item_id:
+            item = await session.get(CartItem, item_id)
+            if not item or item.cart_id != cart.id:
+                await callback.answer("Элемент не найден.")
+                return
+            if action == "incr":
+                item.quantity += 1
+            elif action == "decr":
+                item.quantity -= 1
+                if item.quantity <= 0:
+                    await session.delete(item)
+            elif action == "remove":
+                await session.delete(item)
+            await session.commit()
+
+    await show_cart(callback, db_user)
+
+
+@router.callback_query(F.data.startswith("cart_item:"))
+async def cart_item_hint(callback: types.CallbackQuery):
+    await callback.answer("Выберите действие для товара кнопками ниже.")

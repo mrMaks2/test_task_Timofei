@@ -1,7 +1,12 @@
 from django.contrib import admin
 from django.http import HttpResponse
+from django.conf import settings
 import openpyxl
+import requests
+import logging
 from .models import Order, OrderItem
+
+logger = logging.getLogger(__name__)
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
@@ -30,3 +35,23 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = [OrderItemInline]
     actions = [export_paid_orders]
     readonly_fields = ['total', 'created_at']
+
+    def save_model(self, request, obj, form, change):
+        old_status = None
+        if change:
+            old_status = Order.objects.filter(pk=obj.pk).values_list("status", flat=True).first()
+        super().save_model(request, obj, form, change)
+        if change and old_status and old_status != obj.status and settings.BOT_INTERNAL_TOKEN:
+            try:
+                requests.post(
+                    settings.BOT_WEBHOOK_URL,
+                    json={
+                        "event": "order_status_changed",
+                        "order_id": obj.id,
+                        "new_status": obj.status,
+                    },
+                    headers={"Authorization": f"Bearer {settings.BOT_INTERNAL_TOKEN}"},
+                    timeout=5,
+                )
+            except Exception as exc:
+                logger.error("Failed to notify bot about status change: %s", exc)

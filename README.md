@@ -1,32 +1,42 @@
 # Telegram Shop Bot
 
-Трёхсервисный интернет-магазин: Telegram‑бот (Aiogram 3), админ‑панель (Django), WebApp (React/TS).  
-Все сервисы работают с общей PostgreSQL, общаются через БД и HTTP-уведомления.  
-Запуск одной командой `docker-compose up`.
+Трехсервисный интернет-магазин: Telegram-бот (Aiogram 3), админ-панель (Django), WebApp (React/TS).
 
 ## Архитектура
-- **Общая БД** – данные пользователей, товаров, заказов и т.д. хранятся в PostgreSQL, доступной всем сервисам.
-- **Telegram‑бот** – напрямую читает/пишет в БД через асинхронный SQLAlchemy, обрабатывает пользовательские запросы, проверяет подписки, управляет корзиной и заказами.
-- **Django‑админка** – управляет каталогом, заказами, FAQ, рассылками и настройками бота. Предоставляет REST API для WebApp.
-- **WebApp** – React‑приложение, встроенное в Telegram. Получает данные через API Django, использует Telegram WebApp SDK.
-- **Уведомления** – при изменении статуса заказа в админке Django отправляет HTTP‑запрос на бот, который шлёт сообщение пользователю и обновляет статус в чате администраторов.
+- **Общая БД**: PostgreSQL хранит каталог, корзины, заказы, пользователей.
+- **Telegram-бот**: асинхронный SQLAlchemy, каталог, корзина, заказы, FSM, inline-FAQ.
+- **Django Admin + API**: CRUD, экспорт заказов, REST API для WebApp.
+- **WebApp**: React-приложение внутри Telegram, работает через API и initData.
+- **Уведомления**: Django отправляет HTTP-уведомления в бота (новый заказ, смена статуса, рассылки).
 
 ## Запуск
-1. Скопировать `.env.example` в `.env` и заполнить своими токенами.
-2. Выполнить `docker-compose up --build`.
-3. Админка доступна по адресу `http://localhost:8000/admin` (создайте суперпользователя).
-4. WebApp – `http://localhost:5173`.
-5. Бот запускается в режиме long-polling.
+1. Скопируйте `.env.example` в `.env` и заполните значения.
+2. Запуск: `docker-compose up --build`.
+3. Admin: `http://localhost:8000/admin`
+4. WebApp: `http://localhost:5173`
 
 ## Переменные окружения
-- `BOT_TOKEN` – токен Telegram‑бота.
-- `DJANGO_SECRET_KEY` – секретный ключ Django.
-- `DATABASE_URL` – строка подключения к БД.
-- `BOT_INTERNAL_TOKEN` – токен для аутентификации запросов от Django к боту.
-- `ADMIN_CHAT_ID` – ID чата/группы для уведомлений администраторов (можно переопределить в админке).
+- `BOT_TOKEN` — токен Telegram-бота.
+- `DJANGO_SECRET_KEY` — секрет Django.
+- `DB_*` — параметры PostgreSQL.
+- `BOT_INTERNAL_TOKEN` — токен для внутренних уведомлений.
+- `ADMIN_CHAT_ID` — чат для админ-уведомлений.
+- `ADMIN_IDS` — список Telegram ID админов (через запятую).
+- `WEBAPP_URL` — ссылка на WebApp для кнопки в боте.
+- `MEDIA_BASE_URL` — базовый URL для медиа (например `http://localhost:8000/media`).
+- `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` — домены WebApp.
+- `VITE_TEST_TELEGRAM_ID` — тестовый Telegram ID для локальной отладки WebApp.
 
 ## Структура проекта
-- `bot/` – исходный код Telegram‑бота.
-- `admin/` – исходный код Django‑админки и API.
-- `webapp/` – исходный код React‑WebApp.
-- `docker-compose.yml` – оркестрация сервисов.
+- `bot/` — Telegram-бот (Aiogram).
+- `admin/` — Django-проект и REST API.
+- `webapp/` — React WebApp.
+- `docker-compose.yml` — оркестрация сервисов.
+
+## Примеры API
+- `GET /api/v1/categories/`
+- `GET /api/v1/products/?category=<id>`
+- `GET /api/v1/cart/`
+- `POST /api/v1/cart/add_item/`
+- `POST /api/v1/cart/update_item/`
+- `POST /api/v1/orders/`
