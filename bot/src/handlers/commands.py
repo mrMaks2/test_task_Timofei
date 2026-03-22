@@ -6,10 +6,10 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from datetime import datetime
 
-from ..database import async_session_maker
-from ..models import User, Order, Cart, CartItem, Category, Product, FAQ
-from ..keyboards import main_menu_keyboard
-from ..filters import IsAdminFilter
+import src.database as db
+from src.models import User, Order, Cart, CartItem, Category, Product, FAQ
+from src.keyboards import main_menu_keyboard
+from src.filters import IsAdminFilter
 
 router = Router()
 
@@ -39,7 +39,7 @@ async def cmd_help(message: Message):
 
 @router.message(Command("catalog"))
 async def cmd_catalog(message: Message):
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         result = await session.execute(
             select(Category)
             .where(Category.parent_id.is_(None), Category.is_active == True)
@@ -74,7 +74,7 @@ async def cmd_catalog(message: Message):
 
 @router.message(Command("cart"))
 async def cmd_cart(message: Message, db_user: User):
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         cart_result = await session.execute(
             select(Cart).where(Cart.user_id == db_user.id)
         )
@@ -120,7 +120,7 @@ async def cmd_cart(message: Message, db_user: User):
 
 @router.message(Command("profile"))
 async def cmd_profile(message: Message, db_user: User):
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         orders_result = await session.execute(
             select(Order).where(Order.user_id == db_user.id).order_by(Order.created_at.desc())
         )
@@ -153,7 +153,7 @@ async def cmd_profile(message: Message, db_user: User):
 
 @router.message(Command("faq"))
 async def cmd_faq(message: Message):
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         faqs_result = await session.execute(
             select(FAQ).where(FAQ.is_active == True).order_by(FAQ.order).limit(5)
         )
@@ -199,7 +199,7 @@ async def cmd_support(message: Message):
 async def cmd_admin_panel(message: Message):
     admin_text = "<b>Панель администратора</b>\n\n<b>Статистика:</b>\n"
 
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         total_users = (await session.execute(select(func.count(User.id)))).scalar()
 
         today = datetime.now().date()
@@ -233,7 +233,7 @@ async def cmd_admin_panel(message: Message):
 
 @router.message(Command("myorders"))
 async def cmd_my_orders(message: Message, db_user: User):
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         orders_result = await session.execute(
             select(Order)
             .where(Order.user_id == db_user.id)
@@ -270,3 +270,14 @@ async def cmd_my_orders(message: Message, db_user: User):
 @router.callback_query(F.data == "main_menu")
 async def callback_main_menu(callback: types.CallbackQuery):
     await callback.message.edit_text("Главное меню:", reply_markup=main_menu_keyboard())
+
+@router.callback_query(F.data == "webapp_unavailable")
+async def callback_webapp_unavailable(callback: types.CallbackQuery):
+    await callback.answer("WebApp требует публичный HTTPS URL (localhost не подходит).", show_alert=True)
+
+@router.message(lambda msg: msg.text is not None and not msg.text.startswith("/"))
+async def fallback_message(message: Message):
+    await message.answer(
+        "Я не понял ваш запрос. Используйте команды /help, /catalog, /cart.",
+        reply_markup=main_menu_keyboard(),
+    )

@@ -6,9 +6,25 @@ from aiogram.types import (
     WebAppInfo,
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from .models import Channel
-from .config import settings
-from .callbacks import CartActionCb, CartItemCb, CatalogRootCb
+from src.models import Channel
+from src.config import settings
+from src.callbacks import CartActionCb, CartItemCb, CatalogRootCb
+from urllib.parse import urlparse
+
+
+def _is_public_https_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False
+    if parsed.scheme != "https":
+        return False
+    if not parsed.netloc:
+        return False
+    host = (parsed.hostname or "").lower()
+    if host in {"localhost", "127.0.0.1"}:
+        return False
+    return True
 
 
 def subscription_keyboard(channels: list[Channel]) -> InlineKeyboardMarkup:
@@ -32,10 +48,16 @@ def main_menu_keyboard() -> InlineKeyboardMarkup:
     builder.button(text="Каталог", callback_data=CatalogRootCb(page=1).pack())
     builder.button(text="Корзина", callback_data="cart")
     builder.button(text="FAQ", switch_inline_query_current_chat="")
-    builder.button(
-        text="Открыть WebApp",
-        web_app=WebAppInfo(url=settings.WEBAPP_URL),
-    )
+    if settings.WEBAPP_URL and _is_public_https_url(settings.WEBAPP_URL):
+        builder.button(
+            text="Открыть WebApp",
+            web_app=WebAppInfo(url=settings.WEBAPP_URL),
+        )
+    else:
+        builder.button(
+            text="WebApp (нужен HTTPS)",
+            callback_data="webapp_unavailable",
+        )
     builder.adjust(1)
     return builder.as_markup()
 

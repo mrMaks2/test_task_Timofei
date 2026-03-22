@@ -1,16 +1,18 @@
 from aiohttp import web
-from aiogram import Bot
+from aiogram import Bot, Router
 import asyncio
-from ..config import settings
-from ..database import async_session_maker
+from src.config import settings
+import src.database as db
 from sqlalchemy import select
-from ..models import User, Order, Mailing, MailingLog
+from src.models import User, Order, Mailing, MailingLog
+
+router = Router()
 
 
 async def _run_mailing(mailing_id: int) -> None:
     bot = Bot(token=settings.BOT_TOKEN)
     try:
-        async with async_session_maker() as session:
+        async with db.async_session_maker() as session:
             mailing = await session.get(Mailing, mailing_id)
             if not mailing:
                 return
@@ -39,7 +41,7 @@ async def _run_mailing(mailing_id: int) -> None:
                 error_message = str(exc)
                 error_count += 1
 
-            async with async_session_maker() as session:
+            async with db.async_session_maker() as session:
                 log = MailingLog(
                     mailing_id=mailing_id,
                     user_id=user.id,
@@ -49,7 +51,7 @@ async def _run_mailing(mailing_id: int) -> None:
                 session.add(log)
                 await session.commit()
 
-        async with async_session_maker() as session:
+        async with db.async_session_maker() as session:
             mailing = await session.get(Mailing, mailing_id)
             if mailing:
                 mailing.status = "sent"
@@ -73,7 +75,7 @@ async def process_notification(request: web.Request):
         if event == "order_status_changed":
             order_id = data["order_id"]
             new_status = data["new_status"]
-            async with async_session_maker() as session:
+            async with db.async_session_maker() as session:
                 order = await session.get(Order, order_id)
                 if order:
                     user = await session.get(User, order.user_id)

@@ -2,18 +2,18 @@ from aiogram import Router, types, F
 from aiogram.types import InputMediaPhoto
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from sqlalchemy import select
-from ..database import async_session_maker
-from ..models import Category, Product, ProductImage
-from ..keyboards import product_keyboard
-from ..callbacks import CatalogRootCb, CategoryCb
-from ..config import settings
+import src.database as db
+from src.models import Category, Product, ProductImage
+from src.keyboards import product_keyboard
+from src.callbacks import CatalogRootCb, CategoryCb
+from src.config import settings
 
 router = Router()
 PAGE_SIZE = 5
 
 
 async def _send_product(callback: types.CallbackQuery, product: Product) -> None:
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         images_result = await session.execute(
             select(ProductImage)
             .where(ProductImage.product_id == product.id)
@@ -51,7 +51,7 @@ async def show_categories(callback: types.CallbackQuery):
     data = CatalogRootCb.unpack(callback.data)
     page = data.page
 
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         result = await session.execute(
             select(Category)
             .where(Category.parent_id.is_(None), Category.is_active == True)
@@ -85,7 +85,7 @@ async def open_category(callback: types.CallbackQuery):
     cat_id = data.id
     page = data.page
 
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         subcats_result = await session.execute(
             select(Category).where(Category.parent_id == cat_id, Category.is_active == True)
         )

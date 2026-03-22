@@ -7,7 +7,9 @@ async_session_maker: Optional[async_sessionmaker[AsyncSession]] = None
 
 async def init_db() -> None:
     global engine, async_session_maker
-    from .config import settings
+    if async_session_maker:
+        return
+    from src.config import settings
     engine = create_async_engine(settings.DATABASE_URL, echo=False)
     async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 

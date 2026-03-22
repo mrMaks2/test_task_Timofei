@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import api from "../api/client";
 import { useNavigate } from "react-router-dom";
 
@@ -11,7 +11,7 @@ export default function Checkout() {
   const submit = async () => {
     const tg = window.Telegram?.WebApp;
     try {
-      await api.post("/orders/", {
+      await api.post("orders/", {
         full_name: fullName,
         address,
         phone,
@@ -66,3 +66,4 @@ export default function Checkout() {
     </div>
   );
 }
+

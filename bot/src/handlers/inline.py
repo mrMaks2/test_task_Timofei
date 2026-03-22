@@ -1,8 +1,8 @@
 from aiogram import Router, types
 from aiogram.types import InlineQueryResultArticle, InputTextMessageContent
 from sqlalchemy import select
-from ..database import async_session_maker
-from ..models import FAQ
+import src.database as db
+from src.models import FAQ
 
 router = Router()
 
@@ -10,7 +10,7 @@ router = Router()
 @router.inline_query()
 async def inline_faq(inline_query: types.InlineQuery):
     query = inline_query.query.strip()
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         if query:
             results = await session.execute(
                 select(FAQ)

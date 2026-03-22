@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import api from "../api/client";
 
 interface Product {
@@ -20,7 +20,7 @@ export default function ProductCard({ product, onAdded }: Props) {
   const addToCart = async () => {
     setLoading(true);
     try {
-      await api.post("/cart/add_item/", { product_id: product.id, quantity: 1 });
+      await api.post("cart/add_item/", { product_id: product.id, quantity: 1 });
       window.Telegram?.WebApp.showToast?.("Добавлено в корзину");
       onAdded?.();
     } finally {
@@ -28,7 +28,22 @@ export default function ProductCard({ product, onAdded }: Props) {
     }
   };
 
-  const imageUrl = product.images?.[0]?.image;
+  const imagePath = product.images?.[0]?.image;
+  const apiBase = import.meta.env.VITE_API_URL;
+  let apiOrigin = window.location.origin;
+  if (apiBase) {
+    try {
+      apiOrigin = new URL(apiBase).origin;
+    } catch {
+      apiOrigin = window.location.origin;
+    }
+  }
+  const imageUrl =
+    imagePath && imagePath.startsWith("http")
+      ? imagePath
+      : imagePath
+        ? `${apiOrigin}${imagePath.startsWith("/") ? "" : "/"}${imagePath}`
+        : undefined;
 
   return (
     <div className="card product-card">
@@ -44,3 +59,4 @@ export default function ProductCard({ product, onAdded }: Props) {
     </div>
   );
 }
+

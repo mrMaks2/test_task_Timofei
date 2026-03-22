@@ -19,6 +19,74 @@ body {
   color: var(--tg-theme-text-color, #000000);
 }
 
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell__content {
+  flex: 1;
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: color-mix(in oklab, var(--tg-theme-bg-color, #ffffff) 88%, #ffffff 12%);
+  border-bottom: 1px solid color-mix(in oklab, var(--tg-theme-hint-color, #999999) 35%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.top-nav__inner {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.top-nav__brand {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.top-nav__title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.top-nav__subtitle {
+  font-size: 12px;
+  color: var(--tg-theme-hint-color, #999999);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.top-nav__links {
+  display: flex;
+  gap: 8px;
+}
+
+.top-nav__link {
+  text-decoration: none;
+  color: var(--tg-theme-text-color, #000000);
+  border: 1px solid transparent;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 14px;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.top-nav__link.is-active {
+  background: var(--tg-theme-button-color, #40a7e3);
+  color: var(--tg-theme-button-text-color, #ffffff);
+  border-color: var(--tg-theme-button-color, #40a7e3);
+}
+
 /* Telegram theme variables */
 :root {
   --tg-theme-bg-color: #ffffff;

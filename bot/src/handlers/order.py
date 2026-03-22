@@ -4,9 +4,9 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message, CallbackQuery
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
-from ..database import async_session_maker
-from ..models import Order, OrderItem, Cart, CartItem, User
-from ..config import settings
+import src.database as db
+from src.models import Order, OrderItem, Cart, CartItem, User
+from src.config import settings
 
 router = Router()
 
@@ -39,7 +39,7 @@ async def process_address(message: Message, state: FSMContext, db_user: User):
     data["address"] = message.text
     data["phone"] = db_user.phone
 
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         cart_result = await session.execute(select(Cart).where(Cart.user_id == db_user.id))
         cart = cart_result.scalar_one_or_none()
         if not cart:
@@ -80,7 +80,7 @@ async def cancel_order(callback: CallbackQuery, state: FSMContext):
 @router.callback_query(OrderFSM.confirm, F.data == "confirm_order")
 async def confirm_order(callback: CallbackQuery, state: FSMContext, db_user: User):
     data = await state.get_data()
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         cart_result = await session.execute(select(Cart).where(Cart.user_id == db_user.id))
         cart = cart_result.scalar_one()
         items_result = await session.execute(

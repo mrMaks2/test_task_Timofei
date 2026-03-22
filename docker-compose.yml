@@ -54,7 +54,7 @@ services:
   bot:
     container_name: bot
     build: ./bot
-    command: python src/main.py
+    command: python -m src.main
     volumes:
       - ./bot:/app
     env_file:
@@ -78,12 +78,12 @@ services:
     build:
       context: ./webapp
       args:
-        VITE_API_URL: http://admin:8000/${API_VERS}
+        VITE_API_URL: http://localhost:8000/${API_VERS}
         VITE_TEST_TELEGRAM_ID: ${VITE_TEST_TELEGRAM_ID}
     ports:
       - "5173:80"
     environment:
-      VITE_API_URL: http://admin:8000/${API_VERS}
+      VITE_API_URL: http://localhost:8000/${API_VERS}
       VITE_TEST_TELEGRAM_ID: ${VITE_TEST_TELEGRAM_ID}
     depends_on:
       admin:

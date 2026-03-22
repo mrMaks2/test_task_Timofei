@@ -22,9 +22,11 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.conf.urls.static import static
 
+api_prefix = os.getenv("API_VERS", "api/v1").strip("/")
+
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path(os.getenv('API_VERS', 'api/v1'), include('api.urls')),
+    path("admin/", admin.site.urls),
+    path(f"{api_prefix}/", include("api.urls")),
     path("health/", lambda request: JsonResponse({"status": "ok"})),
 ]
 

@@ -1,16 +1,16 @@
 from aiogram import Router, types, F
 from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload
-from ..database import async_session_maker
-from ..models import Cart, CartItem, User
-from ..keyboards import cart_keyboard
-from ..callbacks import CartActionCb
+import src.database as db
+from src.models import Cart, CartItem, User
+from src.keyboards import cart_keyboard
+from src.callbacks import CartActionCb
 
 router = Router()
 
 
 async def get_or_create_cart(user: User) -> Cart:
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         result = await session.execute(select(Cart).where(Cart.user_id == user.id))
         cart = result.scalar_one_or_none()
         if not cart:
@@ -21,7 +21,7 @@ async def get_or_create_cart(user: User) -> Cart:
 
 
 async def fetch_cart_items(cart_id: int):
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         result = await session.execute(
             select(CartItem)
             .where(CartItem.cart_id == cart_id)
@@ -54,7 +54,7 @@ async def show_cart(callback: types.CallbackQuery, db_user: User):
 async def add_to_cart(callback: types.CallbackQuery, db_user: User):
     product_id = int(callback.data.split(":")[1])
     cart = await get_or_create_cart(db_user)
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         item_result = await session.execute(
             select(CartItem).where(
                 CartItem.cart_id == cart.id, CartItem.product_id == product_id
@@ -78,7 +78,7 @@ async def cart_action(callback: types.CallbackQuery, db_user: User):
     item_id = data.item_id
 
     cart = await get_or_create_cart(db_user)
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         if action == "clear":
             await session.execute(delete(CartItem).where(CartItem.cart_id == cart.id))
             await session.commit()

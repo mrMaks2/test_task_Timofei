@@ -1,11 +1,12 @@
 from aiogram import Router
+from typing import Optional
 from aiogram.filters import CommandStart
 from aiogram.types import Message, ReplyKeyboardRemove, InputMediaPhoto
 from sqlalchemy import select
-from ..database import async_session_maker
-from ..models import User, Product, ProductImage
-from ..keyboards import phone_keyboard, main_menu_keyboard, product_keyboard
-from ..config import settings
+import src.database as db
+from src.models import User, Product, ProductImage
+from src.keyboards import phone_keyboard, main_menu_keyboard, product_keyboard
+from src.config import settings
 
 router = Router()
 
@@ -15,10 +16,32 @@ def _media_url(path: str) -> str:
     return f"{base}/{path.lstrip('/')}"
 
 
+async def _get_or_create_user(message: Message, db_user: Optional[User]) -> Optional[User]:
+    if db_user:
+        return db_user
+    if not db.async_session_maker or not message.from_user:
+        return None
+    async with db.async_session_maker() as session:
+        result = await session.execute(
+            select(User).where(User.telegram_id == message.from_user.id)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            user = User(
+                telegram_id=message.from_user.id,
+                username=message.from_user.username,
+                first_name=message.from_user.first_name,
+                last_name=message.from_user.last_name,
+            )
+            session.add(user)
+            await session.commit()
+        return user
+
+
 async def send_product(message: Message, product_id: int) -> None:
-    if not async_session_maker:
+    if not db.async_session_maker:
         return
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         result = await session.execute(
             select(Product).where(Product.id == product_id, Product.is_active == True)
         )
@@ -50,7 +73,11 @@ async def send_product(message: Message, product_id: int) -> None:
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message, db_user: User):
+async def cmd_start(message: Message, db_user: Optional[User] = None):
+    db_user = await _get_or_create_user(message, db_user)
+    if not db_user:
+        await message.answer("Ошибка инициализации пользователя. Попробуйте позже.")
+        return
     payload = ""
     if message.text and " " in message.text:
         payload = message.text.split(" ", 1)[1].strip()
@@ -76,10 +103,14 @@ async def cmd_start(message: Message, db_user: User):
 
 
 @router.message(lambda msg: msg.contact is not None)
-async def handle_contact(message: Message, db_user: User):
-    if not async_session_maker:
+async def handle_contact(message: Message, db_user: Optional[User] = None):
+    db_user = await _get_or_create_user(message, db_user)
+    if not db_user:
+        await message.answer("Ошибка инициализации пользователя. Попробуйте позже.")
         return
-    async with async_session_maker() as session:
+    if not db.async_session_maker:
+        return
+    async with db.async_session_maker() as session:
         db_user.phone = message.contact.phone_number
         session.add(db_user)
         await session.commit()

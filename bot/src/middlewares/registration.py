@@ -2,8 +2,9 @@ from typing import Callable, Dict, Any, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from sqlalchemy import select
-from ..database import async_session_maker
-from ..models import User
+import src.database as db
+from src.database import init_db
+from src.models import User
 
 
 class RegistrationMiddleware(BaseMiddleware):
@@ -14,10 +15,13 @@ class RegistrationMiddleware(BaseMiddleware):
         data: Dict[str, Any],
     ) -> Any:
         aiogram_user = getattr(event, "from_user", None)
-        if not aiogram_user or not async_session_maker:
+        if not aiogram_user:
             return await handler(event, data)
 
-        async with async_session_maker() as session:
+        if not db.async_session_maker:
+            await init_db()
+
+        async with db.async_session_maker() as session:
             result = await session.execute(
                 select(User).where(User.telegram_id == aiogram_user.id)
             )

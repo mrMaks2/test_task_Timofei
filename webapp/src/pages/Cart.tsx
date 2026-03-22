@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import api from "../api/client";
 import CartItem from "../components/CartItem";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +21,7 @@ export default function Cart() {
   const navigate = useNavigate();
 
   const loadCart = () => {
-    api.get("/cart/").then((res) => {
+    api.get("cart/").then((res) => {
       setItems(res.data.items || []);
       setTotal(res.data.total_amount || 0);
     });
@@ -32,11 +32,11 @@ export default function Cart() {
   }, []);
 
   const updateQuantity = (itemId: number, quantity: number) => {
-    api.post("/cart/update_item/", { item_id: itemId, quantity }).then(loadCart);
+    api.post("cart/update_item/", { item_id: itemId, quantity }).then(loadCart);
   };
 
   const removeItem = (itemId: number) => {
-    api.post("/cart/remove_item/", { item_id: itemId }).then(loadCart);
+    api.post("cart/remove_item/", { item_id: itemId }).then(loadCart);
   };
 
   const checkout = () => {
@@ -77,3 +77,4 @@ export default function Cart() {
     </div>
   );
 }
+

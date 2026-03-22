@@ -7,8 +7,8 @@ ARG VITE_TEST_TELEGRAM_ID
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_TEST_TELEGRAM_ID=$VITE_TEST_TELEGRAM_ID
 
-COPY package.json package-lock.json ./
-RUN npm install
+COPY package*.json ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 COPY . .
 RUN npm run build

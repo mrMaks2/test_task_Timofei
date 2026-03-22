@@ -1,6 +1,6 @@
 from aiogram.filters import BaseFilter
 from aiogram.types import Message
-from ..config import settings
+from src.config import settings
 
 
 class IsAdminFilter(BaseFilter):

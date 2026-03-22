@@ -1,7 +1,7 @@
 from aiogram import Router, types, F
 from sqlalchemy import select
-from ..database import async_session_maker
-from ..models import Order, User
+import src.database as db
+from src.models import Order, User
 
 router = Router()
 
@@ -10,7 +10,7 @@ router = Router()
 async def change_order_status(callback: types.CallbackQuery):
     _, order_id, new_status = callback.data.split(":")
     order_id = int(order_id)
-    async with async_session_maker() as session:
+    async with db.async_session_maker() as session:
         order = await session.get(Order, order_id)
         if not order:
             await callback.answer("Заказ не найден.")

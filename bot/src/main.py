@@ -7,16 +7,16 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiohttp import web
 
-from .config import settings
-from .database import init_db, close_db
-from .middlewares.registration import RegistrationMiddleware
-from .middlewares.subscription import SubscriptionMiddleware
-from .middlewares.logging_mw import LoggingMiddleware
-from .handlers import (
+from src.config import settings
+from src.database import init_db, close_db
+from src.middlewares.registration import RegistrationMiddleware
+from src.middlewares.subscription import SubscriptionMiddleware
+from src.middlewares.logging_mw import LoggingMiddleware
+from src.handlers import (
     start, catalog, cart, order, inline,
     admin_chat, commands, notifications
 )
-from .utils.set_commands import set_bot_commands
+from src.utils.set_commands import set_bot_commands
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ async def on_shutdown(bot: Bot, dispatcher: Dispatcher):
     logger.info("Bot stopped")
 
 async def handle_notification(request: web.Request):
-    from .handlers.notifications import process_notification
+    from src.handlers.notifications import process_notification
     return await process_notification(request)
 
 async def start_webhook_server():
@@ -58,6 +58,7 @@ async def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         handlers=handlers,
     )
+    await init_db()
     bot = Bot(token=settings.BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher()
 
